@@ -1,13 +1,23 @@
 // Package bqueue provides a blocking queue.
-package dq
+package bqueue
+
+import (
+	"context"
+	"errors"
+)
+
+var (
+	ErrDeadlineExceeded = errors.New("deadline exceeded")
+)
 
 type Queue[T any] struct {
 	s chan *state[T]
 }
 
 type waiter[T any] struct {
-	n int
-	c chan []T
+	ctx context.Context
+	n   int
+	c   chan []T
 }
 
 type state[T any] struct {
@@ -27,9 +37,10 @@ func New[T any]() *Queue[T] {
 	return &Queue[T]{s}
 }
 
-// Take takes items from the queue. Blocks until
-// items are available.
+// Take takes items from the queue when it can satisfy demand.
 func (b *Queue[T]) Take(n int) []T {
+	ctx := context.Background()
+
 	s := <-b.s
 	if len(s.wait) == 0 && len(s.items) >= n {
 		items := s.popN(n)
@@ -38,10 +49,16 @@ func (b *Queue[T]) Take(n int) []T {
 	}
 
 	c := make(chan []T)
-	s.wait = append(s.wait, waiter[T]{n, c})
+	s.wait = append(s.wait, waiter[T]{ctx, n, c})
 	b.s <- s
 
 	return <-c
+}
+
+// TODO implement Poll method which is a cancellable Take.
+func (b *Queue[T]) Poll(ctx context.Context, n int) ([]T, error) {
+	<-ctx.Done()
+	return nil, ErrDeadlineExceeded
 }
 
 // Put enqueues an item.
@@ -50,6 +67,11 @@ func (b *Queue[T]) Put(item T) {
 	s.items = append(s.items, item)
 	for len(s.wait) > 0 {
 		w := s.wait[0]
+		// if waiter's context is cancelled; just pass
+		if w.ctx.Err() != nil {
+			s.wait = s.wait[1:]
+			continue
+		}
 		if len(s.items) < w.n {
 			break
 		}
