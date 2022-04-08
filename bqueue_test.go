@@ -9,6 +9,8 @@ import (
 	"github.com/nslaughter/dq"
 )
 
+type testItem struct{}
+
 func min(x, y int) int {
 	if x < y {
 		return x
@@ -20,11 +22,11 @@ func TestQueue(t *testing.T) {
 	t.Log("starting goroutines: ", runtime.NumGoroutine())
 	n := 32
 	tcs := []int{2, 3, 4, 9, 5, 6, 3}
+	b := dq.New[testItem]()
 
-	b := dq.New()
 	t.Log("adding items")
 	for i := 0; i < n; i++ {
-		b.Put(dq.Item{})
+		b.Put(testItem{})
 		t.Log("put an item")
 	}
 

@@ -2,36 +2,34 @@
 // pull based systems.
 package dq
 
-type Item struct{}
-
-type Queue struct {
-	s chan *state
+type Queue[T any] struct {
+	s chan *state[T]
 }
 
-type waiter struct {
+type waiter[T any] struct {
 	n int
-	c chan []Item
+	c chan []T
 }
 
-type state struct {
-	items []Item
-	wait  []waiter
+type state[T any] struct {
+	items []T
+	wait  []waiter[T]
 }
 
-func (s *state) popN(n int) []Item {
+func (s *state[T]) popN(n int) []T {
 	items := s.items[:n:n]
 	s.items = s.items[n:]
 	return items
 }
 
-func New() *Queue {
-	s := make(chan *state, 1)
-	s <- &state{}
-	return &Queue{s}
+func New[T any]() *Queue[T] {
+	s := make(chan *state[T], 1)
+	s <- &state[T]{}
+	return &Queue[T]{s}
 }
 
 // GetMany gets
-func (b *Queue) GetMany(n int) []Item {
+func (b *Queue[T]) GetMany(n int) []T {
 	s := <-b.s
 	if len(s.wait) == 0 && len(s.items) >= n {
 		items := s.popN(n)
@@ -39,15 +37,15 @@ func (b *Queue) GetMany(n int) []Item {
 		return items
 	}
 
-	c := make(chan []Item)
-	s.wait = append(s.wait, waiter{n, c})
+	c := make(chan []T)
+	s.wait = append(s.wait, waiter[T]{n, c})
 	b.s <- s
 
 	return <-c
 }
 
 // Put enqueues an item.
-func (b *Queue) Put(item Item) {
+func (b *Queue[T]) Put(item T) {
 	s := <-b.s
 	s.items = append(s.items, item)
 	for len(s.wait) > 0 {
@@ -62,7 +60,7 @@ func (b *Queue) Put(item Item) {
 }
 
 // Stop flushes what's buffered and closes the queue.
-func (b *Queue) Stop() {
+func (b *Queue[T]) Stop() {
 	s := <-b.s
 	b.flush(s)
 	for _, w := range s.wait {
@@ -72,7 +70,7 @@ func (b *Queue) Stop() {
 
 // flush sends what's enqueued to the current waiter, regardless
 // of the demand size
-func (b *Queue) flush(s *state) {
+func (b *Queue[T]) flush(s *state[T]) {
 	w := s.wait[0]
 	if len(s.items) == 0 {
 		return
@@ -83,7 +81,7 @@ func (b *Queue) flush(s *state) {
 
 // Flush sends enqueued items to the current waiter, regardless
 // of not satisfying the full demand.
-func (b *Queue) Flush() {
+func (b *Queue[T]) Flush() {
 	s := <-b.s
 	b.flush(s)
 	b.s <- s
