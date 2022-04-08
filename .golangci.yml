@@ -1,0 +1,51 @@
+run:
+  issues-exit-code: 1
+  timeout: 5m
+  skip-dirs:
+    - vendor
+
+linters:
+  enable:
+    - gocritic
+    - dupl
+    - gocognit
+    - goconst
+    - gofmt
+    - gosec
+
+linters-settings:
+  cyclop:
+    max-complexity: 10 # max complexity to report
+    package-average: 5.0 # max package complexity to report
+    skip-tests: true
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+  gocognit:
+    min-complexity: 15 # minimal complexity to report
+  goconst:
+    # Minimal length of string constant.
+    # Default: 3
+    min-len: 2
+    # Minimum occurrences of constant string count to trigger issue.
+    # Default: 3
+    min-occurrences: 3
+    ignore-tests: false # whether to ignore tests
+    match-constant: true # scan for literals matching constants
+    numbers: true # default scan also for numbers
+    min: 3
+    max: 3
+    ignore-calls: false # ignore when const not used as call arg
+  godox:
+    # Report comments starting with keywords, this is useful for TODO or FIXME comments that
+    # might be left in the code accidentally and should be resolved before merging.
+    # Default: TODO, BUG, and FIXME.
+    keywords:
+      - TODO
+      - BUG
+      - FIXME
+      # Add others
