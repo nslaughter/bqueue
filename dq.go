@@ -1,5 +1,5 @@
 // Package dq provides a demand queue which has useful properties for building
-// pull based systems. 
+// pull based systems.
 package dq
 
 type Item struct{}
@@ -61,7 +61,7 @@ func (b *Queue) Put(item Item) {
 	b.s <- s
 }
 
-// Stop flushes what's buffered and closes the queue. 
+// Stop flushes what's buffered and closes the queue.
 func (b *Queue) Stop() {
 	s := <-b.s
 	b.flush(s)
@@ -77,7 +77,7 @@ func (b *Queue) flush(s *state) {
 	if len(s.items) == 0 {
 		return
 	}
-	w.c <- s.items[:]
+	w.c <- s.items
 	s.wait = s.wait[1:]
 }
 

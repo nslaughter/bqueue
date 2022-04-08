@@ -1,7 +1,7 @@
-package dq_test 
+package dq_test
 
 import (
-    "runtime"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -17,7 +17,7 @@ func min(x, y int) int {
 }
 
 func TestQueue(t *testing.T) {
-    t.Log("starting goroutines: ", runtime.NumGoroutine())
+	t.Log("starting goroutines: ", runtime.NumGoroutine())
 	n := 32
 	tcs := []int{2, 3, 4, 9, 5, 6, 3}
 
@@ -57,5 +57,5 @@ func TestQueue(t *testing.T) {
 		}
 		bal -= n
 	}
-    t.Log("ending goroutines: ", runtime.NumGoroutine())
+	t.Log("ending goroutines: ", runtime.NumGoroutine())
 }
