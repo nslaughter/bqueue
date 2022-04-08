@@ -1,5 +1,4 @@
-// Package dq provides a demand queue which has useful properties for building
-// pull based systems.
+// Package bqueue provides a blocking queue.
 package dq
 
 type Queue[T any] struct {
@@ -28,8 +27,9 @@ func New[T any]() *Queue[T] {
 	return &Queue[T]{s}
 }
 
-// GetMany gets
-func (b *Queue[T]) GetMany(n int) []T {
+// Take takes items from the queue. Blocks until
+// items are available.
+func (b *Queue[T]) Take(n int) []T {
 	s := <-b.s
 	if len(s.wait) == 0 && len(s.items) >= n {
 		items := s.popN(n)

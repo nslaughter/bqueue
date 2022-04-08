@@ -40,7 +40,7 @@ func TestQueue(t *testing.T) {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			res[i] = len(b.GetMany(tcs[i]))
+			res[i] = len(b.Take(tcs[i]))
 		}(i)
 		t.Log("did sched")
 	}
