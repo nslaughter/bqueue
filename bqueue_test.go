@@ -122,37 +122,39 @@ func TestPutAfterPoll(t *testing.T) {
 	defer cancel()
 	q := bqueue.New[testItem]()
 
-	var (
-		timeit time.Duration
-		items  []testItem
-		err    error
-	)
-
-	block := make(chan struct{})
+	results := make(chan struct {
+		is  []testItem
+		d   time.Duration
+		err error
+	})
 	go func() {
 		// SUT
 		start := time.Now()
-		items, err = q.Poll(ctx, 2)
-		timeit = time.Now().Sub(start)
-		block <- struct{}{}
+		items, err := q.Poll(ctx, 2)
+		d := time.Now().Sub(start)
+		results <- struct {
+			is  []testItem
+			d   time.Duration
+			err error
+		}{items, d, err}
 	}()
 
 	// Put items in queue then unblock chan
 	q.Put(testItem{})
 	q.Put(testItem{})
 
-	if err != nil {
-		t.Fatal("should not err: ", err)
+	res := <-results
+	if res.err != nil {
+		t.Fatal("should not err: ", res.err)
 	}
 
-	if timeit > wait {
+	if res.d > wait {
 		t.Fatal(msgUnexpectedWait, wait)
 	}
 
 	// block until Poll returns
-	<-block
-	if len(items) != 2 {
-		t.Fatalf("expected 2 items: got %d", len(items))
+	if len(res.is) != 2 {
+		t.Fatalf("expected 2 items: got %d", len(res.is))
 	}
 }
 
@@ -175,10 +177,8 @@ func TestQueue(t *testing.T) {
 	t.Log("adding items")
 	for i := 0; i < n; i++ {
 		b.Put(testItem{})
-		t.Log("put an item")
 	}
 
-	t.Log("making results")
 	res := make([]int, len(tcs))
 
 	var wg sync.WaitGroup
@@ -190,7 +190,6 @@ func TestQueue(t *testing.T) {
 			defer wg.Done()
 			res[i] = len(b.Take(tcs[i]))
 		}(i)
-		t.Log("did sched")
 	}
 
 	t.Log("running timer")
