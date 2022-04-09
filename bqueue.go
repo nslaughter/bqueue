@@ -53,7 +53,6 @@ func (b *Queue[T]) Take(n int) []T {
 	return <-c
 }
 
-// TODO implement Poll method which is a cancellable Take.
 func (b *Queue[T]) Poll(ctx context.Context, n int) ([]T, error) {
 	// check for cancellation at start
 	select {
