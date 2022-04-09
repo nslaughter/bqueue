@@ -40,6 +40,10 @@ ci: tidy
 # ============================================================================
 # TEST
 # ============================================================================
+## test:
+test:
+	go test -race ./...
+
 ## cover: build coverage profile at p.out with go test
 cover:
 	go test -coverprofile p.out
