@@ -3,8 +3,6 @@ package bqueue_test
 import (
 	"context"
 	"errors"
-	"runtime"
-	"sync"
 	"testing"
 	"time"
 
@@ -180,53 +178,4 @@ func TestTakeFirst(t *testing.T) {
 	if len(res) != 1 {
 		t.Fatal("expected 1 testItem")
 	}
-}
-
-// When
-// 		cumulative # items Put previous
-// 		- cumulative # items Take previous
-// 		>= current # items Take
-// Then
-// 		Poll returns # items
-// Else
-// 		Poll waits for time.Duration
-func TestQueue(t *testing.T) {
-	t.Log("starting goroutines: ", runtime.NumGoroutine())
-	n := 32
-	tcs := []int{2, 3, 4, 9, 5, 6, 3}
-	b := bqueue.New[testItem]()
-
-	t.Log("adding items")
-	for i := 0; i < n; i++ {
-		b.Put(testItem{})
-	}
-
-	res := make([]int, len(tcs))
-
-	var wg sync.WaitGroup
-
-	t.Log("starting queue consumers")
-	for i := 0; i < len(tcs); i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			res[i] = len(b.Take(tcs[i]))
-		}(i)
-	}
-
-	t.Log("running timer")
-	time.AfterFunc(time.Millisecond*1000, func() {
-		b.Stop()
-	})
-
-	wg.Wait()
-
-	bal := n
-	for i, n := range tcs {
-		if res[i] != min(tcs[i], bal) {
-			t.Fatalf("index %d missed: bal %d, input %d, got %d", i, bal, tcs[i], res[i])
-		}
-		bal -= n
-	}
-	t.Log("ending goroutines: ", runtime.NumGoroutine())
 }

@@ -101,31 +101,3 @@ func (b *Queue[T]) Put(item T) {
 	}
 	b.s <- s
 }
-
-// Stop flushes what's buffered and closes the queue.
-func (b *Queue[T]) Stop() {
-	s := <-b.s
-	b.flush(s)
-	for _, w := range s.wait {
-		close(w.c)
-	}
-}
-
-// flush sends what's enqueued to the current waiter, regardless
-// of the demand size
-func (b *Queue[T]) flush(s *state[T]) {
-	w := s.wait[0]
-	if len(s.items) == 0 {
-		return
-	}
-	w.c <- s.items
-	s.wait = s.wait[1:]
-}
-
-// Flush sends enqueued items to the current waiter, regardless
-// of not satisfying the full demand.
-func (b *Queue[T]) Flush() {
-	s := <-b.s
-	b.flush(s)
-	b.s <- s
-}
