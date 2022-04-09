@@ -1,0 +1,11 @@
+# Test binary, built with `go test -c`
+*.test
+
+# Excluding vendor dir for now, though it's not 110% reproduceable.
+vendor
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Go workspace file
+go.work
