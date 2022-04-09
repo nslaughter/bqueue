@@ -1,10 +1,5 @@
 SHELL := /bin/bash
 
-# burnin some build info
-DATE := `date -u +"%Y-%m-%dT%H:%M:%SZ"`
-VERSION := $(shell git describe --always --dirty --tags --long)
-# $(shell git rev-parse --short HEAD) # doesn't include dirty
-
 # ============================================================================
 # HELPERS
 # ============================================================================
