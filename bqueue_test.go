@@ -158,6 +158,30 @@ func TestPutAfterPoll(t *testing.T) {
 	}
 }
 
+func TestTakeFirst(t *testing.T) {
+	t.Parallel()
+	b := bqueue.New[testItem]()
+	resC := make(chan []testItem)
+	wait := make(chan struct{})
+
+	// Take
+	go func() {
+		wait <- struct{}{}
+		resC <- b.Take(1)
+	}()
+
+	// Put
+	go func() {
+		<-wait
+		b.Put(testItem{})
+	}()
+
+	res := <-resC
+	if len(res) != 1 {
+		t.Fatal("expected 1 testItem")
+	}
+}
+
 // When
 // 		cumulative # items Put previous
 // 		- cumulative # items Take previous
@@ -166,9 +190,7 @@ func TestPutAfterPoll(t *testing.T) {
 // 		Poll returns # items
 // Else
 // 		Poll waits for time.Duration
-
 func TestQueue(t *testing.T) {
-	t.Parallel()
 	t.Log("starting goroutines: ", runtime.NumGoroutine())
 	n := 32
 	tcs := []int{2, 3, 4, 9, 5, 6, 3}
@@ -193,7 +215,7 @@ func TestQueue(t *testing.T) {
 	}
 
 	t.Log("running timer")
-	time.AfterFunc(time.Millisecond*500, func() {
+	time.AfterFunc(time.Millisecond*1000, func() {
 		b.Stop()
 	})
 
