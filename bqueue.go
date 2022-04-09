@@ -3,11 +3,6 @@ package bqueue
 
 import (
 	"context"
-	"errors"
-)
-
-var (
-	ErrDeadlineExceeded = errors.New("deadline exceeded")
 )
 
 type Queue[T any] struct {
@@ -33,7 +28,10 @@ func (s *state[T]) popN(n int) []T {
 
 func New[T any]() *Queue[T] {
 	s := make(chan *state[T], 1)
-	s <- &state[T]{}
+	s <- &state[T]{
+		items: make([]T, 0),
+		wait:  make([]waiter[T], 0),
+	}
 	return &Queue[T]{s}
 }
 
@@ -57,8 +55,32 @@ func (b *Queue[T]) Take(n int) []T {
 
 // TODO implement Poll method which is a cancellable Take.
 func (b *Queue[T]) Poll(ctx context.Context, n int) ([]T, error) {
-	<-ctx.Done()
-	return nil, ErrDeadlineExceeded
+	// check for cancellation at start
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+	}
+
+	// just satisfy demand if we have the items
+	s := <-b.s
+	if len(s.wait) == 0 && len(s.items) >= n {
+		items := s.popN(n)
+		b.s <- s
+		return items, nil
+	}
+
+	// add waiter to queue
+	c := make(chan []T)
+	s.wait = append(s.wait, waiter[T]{ctx, n, c})
+	b.s <- s
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case items := <-c:
+		return items, nil
+	}
 }
 
 // Put enqueues an item.
@@ -67,7 +89,6 @@ func (b *Queue[T]) Put(item T) {
 	s.items = append(s.items, item)
 	for len(s.wait) > 0 {
 		w := s.wait[0]
-		// if waiter's context is cancelled; just pass
 		if w.ctx.Err() != nil {
 			s.wait = s.wait[1:]
 			continue
