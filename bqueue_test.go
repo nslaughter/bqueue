@@ -11,6 +11,10 @@ import (
 	"github.com/nslaughter/bqueue"
 )
 
+const (
+	msgUnexpectedWait = "unexpected wait: "
+)
+
 type testItem struct {
 	id int
 }
@@ -74,7 +78,7 @@ func TestPollTimeout(t *testing.T) {
 	}
 
 	if end.Sub(start) < wait {
-		t.Fatal("should have waited longer")
+		t.Fatal(msgUnexpectedWait, end.Sub(start))
 	}
 }
 
@@ -103,12 +107,11 @@ func TestPollAfterPut(t *testing.T) {
 		t.Fatal("should not err: ", err)
 	}
 
-	if end.Sub(start) > time.Millisecond*50 {
-		t.Fatal("should have waited longer")
-	}
-
 	if len(items) != 2 {
 		t.Fatal("expected 2 items")
+	}
+	if end.Sub(start) > wait {
+		t.Fatal(msgUnexpectedWait, end.Sub(start))
 	}
 }
 
@@ -142,8 +145,8 @@ func TestPutAfterPoll(t *testing.T) {
 		t.Fatal("should not err: ", err)
 	}
 
-	if timeit > time.Millisecond*50 {
-		t.Fatal("should have waited longer")
+	if timeit > wait {
+		t.Fatal(msgUnexpectedWait, wait)
 	}
 
 	// block until Poll returns
