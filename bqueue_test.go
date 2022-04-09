@@ -26,7 +26,6 @@ func min(x, y int) int {
 	return y
 }
 
-// Invariants
 // When
 // 		cumulative # items Put previous
 // 		- cumulative # items Take previous
@@ -65,15 +64,92 @@ func TestPollTimeout(t *testing.T) {
 	defer cancel()
 	q := bqueue.New[testItem]()
 
+	// SUT
 	start := time.Now()
 	_, err := q.Poll(ctx, 1)
-	if !errors.Is(err, bqueue.ErrDeadlineExceeded) {
-		t.Fatal("currently don't want this test passing")
-	}
 	end := time.Now()
+
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatal("deadline")
+	}
 
 	if end.Sub(start) < wait {
 		t.Fatal("should have waited longer")
+	}
+}
+
+func TestPollAfterPut(t *testing.T) {
+	t.Parallel()
+	wait := time.Millisecond * 100
+	ctx, cancel := context.WithTimeout(context.Background(), wait)
+	defer cancel()
+	q := bqueue.New[testItem]()
+
+	// Put items in queue then unblock chan
+	block := make(chan struct{})
+	go func() {
+		q.Put(testItem{})
+		q.Put(testItem{})
+		block <- struct{}{}
+	}()
+
+	// SUT
+	<-block
+	start := time.Now()
+	items, err := q.Poll(ctx, 2)
+	end := time.Now()
+
+	if err != nil {
+		t.Fatal("should not err: ", err)
+	}
+
+	if end.Sub(start) > time.Millisecond*50 {
+		t.Fatal("should have waited longer")
+	}
+
+	if len(items) != 2 {
+		t.Fatal("expected 2 items")
+	}
+}
+
+func TestPutAfterPoll(t *testing.T) {
+	t.Parallel()
+	wait := time.Millisecond * 100
+	ctx, cancel := context.WithTimeout(context.Background(), wait)
+	defer cancel()
+	q := bqueue.New[testItem]()
+
+	var (
+		timeit time.Duration
+		items  []testItem
+		err    error
+	)
+
+	block := make(chan struct{})
+	go func() {
+		// SUT
+		start := time.Now()
+		items, err = q.Poll(ctx, 2)
+		timeit = time.Now().Sub(start)
+		block <- struct{}{}
+	}()
+
+	// Put items in queue then unblock chan
+	q.Put(testItem{})
+	q.Put(testItem{})
+
+	if err != nil {
+		t.Fatal("should not err: ", err)
+	}
+
+	if timeit > time.Millisecond*50 {
+		t.Fatal("should have waited longer")
+	}
+
+	// block until Poll returns
+	<-block
+	if len(items) != 2 {
+		t.Fatalf("expected 2 items: got %d", len(items))
 	}
 }
 
@@ -115,7 +191,7 @@ func TestQueue(t *testing.T) {
 	}
 
 	t.Log("running timer")
-	time.AfterFunc(time.Millisecond*100, func() {
+	time.AfterFunc(time.Millisecond*500, func() {
 		b.Stop()
 	})
 
