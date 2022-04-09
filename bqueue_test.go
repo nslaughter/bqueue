@@ -90,8 +90,8 @@ func TestPollAfterPut(t *testing.T) {
 	// Put items in queue then unblock chan
 	block := make(chan struct{})
 	go func() {
-		q.Put(testItem{})
-		q.Put(testItem{})
+		q.Put(newTestItem(1))
+		q.Put(newTestItem(2))
 		block <- struct{}{}
 	}()
 
@@ -138,8 +138,8 @@ func TestPutAfterPoll(t *testing.T) {
 	}()
 
 	// Put items in queue then unblock chan
-	q.Put(testItem{})
-	q.Put(testItem{})
+	q.Put(newTestItem(1))
+	q.Put(newTestItem(2))
 
 	res := <-results
 	if res.err != nil {
@@ -171,7 +171,7 @@ func TestTakeFirst(t *testing.T) {
 	// Put
 	go func() {
 		<-wait
-		b.Put(testItem{})
+		b.Put(newTestItem(1))
 	}()
 
 	res := <-resC
